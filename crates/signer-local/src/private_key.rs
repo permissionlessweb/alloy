@@ -60,7 +60,14 @@ impl LocalSigner<SigningKey> {
     /// Creates a new random keypair seeded with the provided RNG.
     #[inline]
     pub fn random_with<R: Rng + CryptoRng>(rng: &mut R) -> Self {
-        Self::from_signing_key(SigningKey::random(rng))
+        // `SigningKey::random` takes rand_core 0.10. Callers still pass rand 0.8.
+        loop {
+            let mut bytes = [0u8; 32];
+            rng.fill_bytes(&mut bytes);
+            if let Ok(key) = SigningKey::from_slice(&bytes) {
+                return Self::from_signing_key(key);
+            }
+        }
     }
 
     /// Borrow the secret [`NonZeroScalar`] value for this key.
@@ -91,7 +98,7 @@ impl LocalSigner<SigningKey> {
     /// array.
     #[inline]
     pub fn public_key(&self) -> B512 {
-        B512::from_slice(&self.credential.verifying_key().to_encoded_point(false).as_bytes()[1..])
+        B512::from_slice(&self.credential.verifying_key().to_sec1_point(false).as_bytes()[1..])
     }
 }
 
@@ -378,7 +385,7 @@ mod tests {
         let signer_b256: LocalSigner<SigningKey> = LocalSigner::from_bytes(&key).unwrap();
         assert_eq!(signer_b256.address, address!("7E5F4552091A69125d5DfCb7b8C2659029395Bdf"));
         assert_eq!(signer_b256.chain_id, None);
-        assert_eq!(signer_b256.credential, SigningKey::from_bytes((&key.0).into()).unwrap());
+        assert_eq!(signer_b256.credential, SigningKey::from_slice(&key.0).unwrap());
 
         let signer_str = LocalSigner::from_str(
             "0000000000000000000000000000000000000000000000000000000000000001",

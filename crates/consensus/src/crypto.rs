@@ -322,7 +322,8 @@ mod impl_k256 {
         let mut recid = sig[64];
 
         // normalize signature and flip recovery id if needed.
-        if let Some(sig_normalized) = signature.normalize_s() {
+        let sig_normalized = signature.normalize_s();
+        if sig_normalized.to_bytes() != signature.to_bytes() {
             signature = sig_normalized;
             recid ^= 1;
         }
@@ -337,13 +338,13 @@ mod impl_k256 {
     /// Returns the corresponding signature.
     pub fn sign_message(secret: B256, message: B256) -> Result<Signature, Error> {
         let sec = SigningKey::from_slice(secret.as_ref())?;
-        sec.sign_prehash_recoverable(&message.0).map(Into::into)
+        Ok(sec.sign_prehash_recoverable(&message.0).into())
     }
 
     /// Converts a public key into an ethereum address by hashing the encoded public key with
     /// keccak256.
     pub fn public_key_to_address(public: VerifyingKey) -> Address {
-        let hash = keccak256(&public.to_encoded_point(/* compress = */ false).as_bytes()[1..]);
+        let hash = keccak256(&public.to_sec1_point(/* compress = */ false).as_bytes()[1..]);
         Address::from_slice(&hash[12..])
     }
 }
@@ -379,7 +380,8 @@ mod tests {
         use super::impl_k256::*;
         use alloy_primitives::B256;
 
-        let secret = k256::ecdsa::SigningKey::random(&mut rand::thread_rng());
+        use k256::elliptic_curve::Generate;
+        let secret = k256::ecdsa::SigningKey::generate();
         let public = *secret.verifying_key();
         let signer = public_key_to_address(public);
 

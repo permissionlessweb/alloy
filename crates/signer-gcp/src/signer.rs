@@ -274,7 +274,7 @@ fn decode_pubkey(key: PublicKey) -> Result<VerifyingKey, GcpSignerError> {
 /// Decode a raw GCP KMS Signature response.
 fn decode_signature(raw: Vec<u8>) -> Result<ecdsa::Signature, GcpSignerError> {
     let sig = ecdsa::Signature::from_der(raw.as_ref())?;
-    Ok(sig.normalize_s().unwrap_or(sig))
+    Ok(sig.normalize_s())
 }
 
 /// Recover an RSig from a signature under a known key by trial/error.

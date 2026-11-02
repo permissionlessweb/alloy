@@ -2,7 +2,7 @@
 
 use super::LocalSigner;
 use alloy_signer::utils::raw_public_key_to_address;
-use elliptic_curve::sec1::{FromEncodedPoint, ToEncodedPoint};
+use elliptic_curve::sec1::{FromSec1Point, ToSec1Point};
 use k256::{PublicKey, Secp256k1};
 use yubihsm::{
     asymmetric::Algorithm::EcK256, ecdsa::Signer as YubiSigner, object, object::Label, Capability,
@@ -54,8 +54,10 @@ impl LocalSigner<YubiSigner<Secp256k1>> {
 impl From<YubiSigner<Secp256k1>> for LocalSigner<YubiSigner<Secp256k1>> {
     fn from(credential: YubiSigner<Secp256k1>) -> Self {
         // Uncompress the public key.
-        let pubkey = PublicKey::from_encoded_point(credential.public_key()).unwrap();
-        let pubkey = pubkey.to_encoded_point(false);
+        let pubkey = PublicKey::from_sec1_point(&credential.public_key())
+            .into_option()
+            .unwrap();
+        let pubkey = pubkey.to_sec1_point(false);
         let bytes = pubkey.as_bytes();
         debug_assert_eq!(bytes[0], 0x04);
         let address = raw_public_key_to_address(&bytes[1..]);

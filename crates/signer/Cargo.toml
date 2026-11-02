@@ -28,7 +28,6 @@ either.workspace = true
 
 async-trait.workspace = true
 auto_impl.workspace = true
-elliptic-curve.workspace = true
 k256.workspace = true
 thiserror.workspace = true
 
