@@ -220,6 +220,7 @@ impl<'a> SerdeGenerator<'a> {
         let generics = self.generics;
         let unwrapped_generics = &generics.params;
         let serde = &self.serde;
+        let alloy_consensus = self.alloy_consensus;
         let serde_bounds = self.generate_serde_bounds();
 
         let flattened_names = self.variants.flattened.iter().map(|v| &v.name);
@@ -232,12 +233,15 @@ impl<'a> SerdeGenerator<'a> {
                 where
                     D: #serde::Deserializer<'de>,
                 {
-                    let content = #serde::__private::de::Content::deserialize(deserializer)?;
-                    let deserializer =
-                        #serde::__private::de::ContentRefDeserializer::<D::Error>::new(&content);
+                    // serde 1.0.220+ removed `__private::de::Content`. Buffer as JSON
+                    // so tagged and flattened attempts can read the same value.
+                    let value = <#alloy_consensus::private::serde_json::Value as #serde::Deserialize>::deserialize(deserializer)?;
+                    let deserializer = &value;
 
                     let tagged_res =
-                        TaggedTxTypes::<#unwrapped_generics>::deserialize(deserializer).map(Self::Tagged);
+                        TaggedTxTypes::<#unwrapped_generics>::deserialize(deserializer)
+                            .map(Self::Tagged)
+                            .map_err(#serde::de::Error::custom);
 
                     if tagged_res.is_ok() {
                         // return tagged if successful
